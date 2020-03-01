@@ -66,6 +66,40 @@ RSpec.describe Message, type: :model do
         expect(message.message_html).to include("sidecar-tag")
       end
 
+      context 'medium.com article link' do
+        context 'article exists' do
+          before do
+            @article_url = "https://medium.com/@shaymalchi/my-foolproof-algorithm-for-upgrading-ruby-on-rails-f0dea750c3c5"
+            stub_request(:get, @article_url).to_return(status: 200, body: File.read('spec/fixtures/files/medium_article.html'))
+          end
+
+          it "creates rich link with proper link for article" do
+            message.message_markdown = "hello #{@article_url}"
+            message.validate!
+
+            expect(message.message_html).to include("sidecar-article")
+            expect(message.message_html).to include('chatchannels__richlinkmainimage')
+            expect(message.message_html).to include('Alexey Naumov')
+            expect(message.message_html).to include('Save Your Next App From Having to Be Rebuilt From Scratch')
+          end
+        end
+
+        context 'article does not exists' do
+          before do
+            @article_url = "https://medium.com/@shaymalchi/rails-f0dea7"
+            stub_request(:get, "https://medium.com/@shaymalchi/rails-f0dea7").to_return(status: 404, body: "")
+          end
+
+          it "does not create rich link for medium.com article" do
+            message.message_markdown = "hello #{@article_url}"
+            message.validate!
+
+            expect(message.message_html).not_to include("sidecar-article")
+            expect(message.message_html).not_to include('chatchannels__richlinkmainimage')
+          end
+        end
+      end
+
       it "creates rich link with non-rich link" do
         message.message_markdown = "hello http://#{ApplicationConfig['APP_DOMAIN']}/report-abuse"
         message.validate!
@@ -81,7 +115,7 @@ RSpec.describe Message, type: :model do
         expect(message.message_html).to include("/#{user.username}")
       end
 
-      it "doesn't creates mention if user exists" do
+      it "doesn't creates mention if user does not exists" do
         message.message_markdown = "Hello @#{random_word}"
         message.validate!
 
