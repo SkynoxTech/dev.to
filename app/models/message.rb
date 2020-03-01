@@ -120,6 +120,17 @@ class Message < ApplicationRecord
             #{user.name}
           </h1>
           </a>".html_safe
+      elsif anchor.text.include?('medium.com/')
+        article = medium_article_details(anchor.text)
+        if article.present?
+          html += "<a href='#{anchor.text}'
+          class='chatchannels__richlink'
+            target='_blank' data-content='sidecar-article'>
+              #{"<div class='chatchannels__richlinkmainimage' style='background-image:url(" + article[:main_image_url] + ")' data-content='sidecar-article' ></div>" if article[:main_image_url].present?}
+            <h1 data-content='sidecar-article'>#{article[:title]}</h1>
+            <h4 data-content='sidecar-article'><img src='#{article[:author][:image_url]}' /> #{article[:author][:name]}</h4>
+            </a>".html_safe
+        end
       end
     end
     html
@@ -134,6 +145,18 @@ class Message < ApplicationRecord
                     flags: "progressive",
                     fetch_format: "auto",
                     sign_url: true)
+  end
+
+  def medium_article_details(article_link)
+    doc = Nokogiri::HTML.parse(Net::HTTP.get(URI.parse(article_link)))
+    author_detail = doc.css('/html/body/div/div/article/div/section/div/div/div/div/div/div').css('img').first
+    return if author_detail.blank?
+    author_name = author_detail.attr('alt')
+    author_image_url = author_detail.attr('src')
+    article_title = doc.css('/html/body/div/div/article/div/section/div/div/div/div/h1').text
+    return if article_title.blank?
+    main_image_url = doc.css('/html/body/div/div/article/div/section/div/div/figure/div/div/div/div/div/img').attr('src')
+    { author: { name: author_name, image_url: author_image_url }, title: article_title, main_image_url: main_image_url }
   end
 
   def determine_user_validity
