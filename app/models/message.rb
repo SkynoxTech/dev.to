@@ -93,13 +93,23 @@ class Message < ApplicationRecord
     doc = Nokogiri::HTML(html)
     doc.css("a").each do |anchor|
       if (article = rich_link_article(anchor))
-        html += "<a href='#{article.current_state_path}'
-        class='chatchannels__richlink'
-          target='_blank' data-content='sidecar-article'>
-            #{"<div class='chatchannels__richlinkmainimage' style='background-image:url(" + cl_path(article.main_image) + ")' data-content='sidecar-article' ></div>" if article.main_image.present?}
-          <h1 data-content='sidecar-article'>#{article.title}</h1>
-          <h4 data-content='sidecar-article'><img src='#{ProfileImage.new(article.cached_user).get(width: 90)}' /> #{article.cached_user.name}・#{article.readable_publish_date || 'Draft Post'}</h4>
-          </a>".html_safe
+        if article.class == Hash
+          html += "<a href='#{article[:url]}'
+          class='chatchannels__richlink'
+            target='_blank' data-content='sidecar-article'>
+              #{"<div class='chatchannels__richlinkmainimage' style='background-image:url(#{article[:image]})' data-content='sidecar-article' ></div>" if article[:image].present?}
+            <h1 data-content='sidecar-article'>#{article[:title]}</h1>
+            <h4 data-content='sidecar-article'>#{article[:description]}</h4>
+            </a>".html_safe
+        else
+          html += "<a href='#{article.current_state_path}'
+          class='chatchannels__richlink'
+            target='_blank' data-content='sidecar-article'>
+              #{"<div class='chatchannels__richlinkmainimage' style='background-image:url(" + cl_path(article.main_image) + ")' data-content='sidecar-article' ></div>" if article.main_image.present?}
+            <h1 data-content='sidecar-article'>#{article.title}</h1>
+            <h4 data-content='sidecar-article'><img src='#{ProfileImage.new(article.cached_user).get(width: 90)}' /> #{article.cached_user.name}・#{article.readable_publish_date || 'Draft Post'}</h4>
+            </a>".html_safe
+        end
       elsif (tag = rich_link_tag(anchor))
         html += "<a href='/t/#{tag.name}'
         class='chatchannels__richlink'
@@ -152,7 +162,21 @@ class Message < ApplicationRecord
   end
 
   def rich_link_article(link)
-    Article.find_by(slug: link["href"].split("/")[4].split("?")[0]) if link["href"].include?("//#{ApplicationConfig['APP_DOMAIN']}/") && link["href"].split("/")[4]
+    website = OpenGraph.new(link["href"]).metadata
+    unless website.nil?
+      if website[:site_name][0][:_value] == "Medium"
+       {
+          title: website[:title][0][:_value],
+          description: website[:description][0][:_value],
+          image: !website[:image].nil? ? website[:image][0][:_value]: "",
+          url: link[:href],
+          type: website[:type][0][:_value],
+          site_name: website[:site_name][0][:_value]
+        }
+      elsif website[:site_name][0][:_value] == "The DEV Community"
+        Article.find_by(slug: link["href"].split("/")[4].split("?")[0]) if link["href"].include?("//#{ApplicationConfig['APP_DOMAIN']}/") && link["href"].split("/")[4]
+      end
+    end
   end
 
   def rich_link_tag(link)
