@@ -163,7 +163,7 @@ class Message < ApplicationRecord
 
   def rich_link_article(link)
     website = OpenGraph.new(link["href"]).metadata
-    unless website.nil?
+    if website.present?
       if website[:site_name][0][:_value] == "Medium"
        {
           title: website[:title][0][:_value],
