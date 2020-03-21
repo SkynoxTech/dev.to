@@ -118,6 +118,13 @@ class Message < ApplicationRecord
             #{user.name}
           </h1>
           </a>".html_safe
+      elsif (medium = rich_medium_link(anchor))
+        html += "<a href='#{medium.url}'
+        class='chatchannels__richlink'
+          target='_blank' data-content='sidecar-medium'>
+            #{"<div class='chatchannels__richlinkmainimage' style='background-image:url(" + medium.image_url + ")' data-content='sidecar-medium' ></div>" if medium.image_url.present?}
+          <h1 data-content='sidecar-medium'>#{medium.title}</h1>
+          <h4 data-content='sidecar-medium'>#{medium.description}</h4>".html_safe
       end
     end
     html
@@ -161,6 +168,14 @@ class Message < ApplicationRecord
 
   def rich_user_link(link)
     User.find_by(username: link["href"].split("/")[3].split("/")[0]) if link["href"].include?("//#{ApplicationConfig['APP_DOMAIN']}/")
+  end
+
+  def rich_medium_link(link)
+    # restricted to preview only medium urls. Not sure we need to suport others or not.
+    return unless link["href"].include?(ApplicationConfig["MEDIUM_DOMIAN"]) && link["href"].split("/")[4]
+
+    website = OpenGraph.new(link["href"])
+    OpenStruct.new(title: website.title, url: website.url, description: website.description.presence, image_url: website.images.present? ? website.images.first : nil) if website
   end
 
   def send_email_if_appropriate
