@@ -163,6 +163,10 @@ variable :TWITCH_WEBHOOK_SECRET, :String, default: "Optional"
 # (https://api.stackexchange.com/docs)
 variable :STACK_EXCHANGE_APP_KEY, :String, default: ""
 
+# For Heroku domain
+# ("https://medium.com/")
+variable :MEDIUM_DOMIAN, :String, default: "https://medium.com/"
+
 # For setting the IDs of the staff and welcoming users
 variable :STAFF_USER_ID, :Integer, default: 1
 variable :WELCOMING_USER_ID, :Integer, default: 1
@@ -182,4 +186,5 @@ group :production do
 
   # Heroku
   variable :HEROKU_APP_URL, :String  # practicaldev.herokuapp.com
+  variable :MEDIUM_DOMIAN, :String, default: "https://medium.com/"
 end
