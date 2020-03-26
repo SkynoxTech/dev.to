@@ -33,6 +33,9 @@ variable :REDIS_SIDEKIQ_URL, :String, default: "redis://localhost:6379"
 # Elasticsearch
 variable :ELASTICSEARCH_URL, :String, default: "http://localhost:9200"
 
+# env
+variable :MEDIUM_DOMIAN, :String, default: "https://medium.com/"
+
 ################################################
 ############## 3rd Party Services ##############
 ################################################
@@ -182,4 +185,5 @@ group :production do
 
   # Heroku
   variable :HEROKU_APP_URL, :String  # practicaldev.herokuapp.com
+  variable :MEDIUM_DOMIAN, :String, default: "https://medium.com/"
 end

@@ -7,6 +7,7 @@ RSpec.describe Message, type: :model do
   let(:chat_channel) { create(:chat_channel) }
   let(:message) { create(:message, user: user) }
   let(:random_word) { Faker::Lorem.word }
+  let(:medium_url) { "https://medium.com/@jpsmithalt/hold-the-line-17231c48ff17" }
 
   describe "validations" do
     context "with automatic validations" do
@@ -71,6 +72,23 @@ RSpec.describe Message, type: :model do
         message.validate!
 
         expect(message.message_html).not_to include("data-content")
+      end
+
+      it "creates rich link with non-rich link for medium" do
+        stub_request(:get, medium_url).
+          with(
+            headers: {
+              "Accept" => "*/*",
+              "Accept-Encoding" => "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+              "User-Agent" => "Ruby"
+            },
+          ).
+          to_return(status: 200, body: "medium article", headers: {})
+
+        message.message_markdown = medium_url
+        message.validate!
+
+        expect(message.message_html).to include("data-content")
       end
 
       it "creates mention if user exists" do

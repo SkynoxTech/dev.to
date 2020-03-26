@@ -118,8 +118,11 @@ class Message < ApplicationRecord
             #{user.name}
           </h1>
           </a>".html_safe
+      elsif (medium = PreviewMediumService.call(anchor))
+        html += medium.rich_link.html_safe
       end
     end
+
     html
   end
 
