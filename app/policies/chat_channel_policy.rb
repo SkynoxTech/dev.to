@@ -11,6 +11,10 @@ class ChatChannelPolicy < ApplicationPolicy
     user_can_edit_channel
   end
 
+  def update_channel?
+    user_can_edit_channel
+  end
+
   def moderate?
     !user_is_banned? && user_admin?
   end

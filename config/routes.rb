@@ -253,12 +253,21 @@ Rails.application.routes.draw do
   get "/chat_channels/:id/channel_info", to: "chat_channels#channel_info", as: :chat_channel_info
   post "/chat_channels/create_chat" => "chat_channels#create_chat"
   post "/chat_channels/block_chat" => "chat_channels#block_chat"
+  patch "/update_chat_channel/:id" => "chat_channels#update_channel"
   post "/chat_channel_memberships/remove_membership" => "chat_channel_memberships#remove_membership"
   delete "/messages/:id" => "messages#destroy"
   patch "/messages/:id" => "messages#update"
   get "/live/:username" => "twitch_live_streams#show"
 
   post "/pusher/auth" => "pusher#auth"
+
+  # Chat Channel Membership
+  get "/chat_channel_memberships/find_by_chat_channel_id" => "chat_channel_memberships#find_by_chat_channel_id"
+  get "/chat_channel_memberships/edit_membership" => "chat_channel_memberships#edit_membership"
+  post "/chat_channel_memberships/create_membership" => "chat_channel_memberships#create_membership"
+  patch "/chat_channel_memberships/update_membership/:id" => "chat_channel_memberships#update_membership"
+  delete "/chat_channel_memberships/destroy_membership/:id" => "chat_channel_memberships#destroy_membership"
+  post "/chat_channel_memberships/remove_membership_json" => "chat_channel_memberships#remove_membership_json"
 
   get "/social_previews/article/:id" => "social_previews#article", :as => :article_social_preview
   get "/social_previews/user/:id" => "social_previews#user", :as => :user_social_preview

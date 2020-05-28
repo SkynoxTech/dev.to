@@ -1,6 +1,6 @@
 class ChatChannelsController < ApplicationController
   before_action :authenticate_user!, only: %i[moderate]
-  before_action :set_channel, only: %i[show update open moderate]
+  before_action :set_channel, only: %i[show update open moderate update_channel]
   after_action :verify_authorized
 
   def index
@@ -38,6 +38,19 @@ class ChatChannelsController < ApplicationController
     end
     current_user_membership = @chat_channel.mod_memberships.find_by!(user: current_user)
     redirect_to edit_chat_channel_membership_path(current_user_membership)
+  end
+
+  def update_channel
+    if ChatChannelUpdateService.new(@chat_channel, chat_channel_params).update
+      flash_message = "Channel settings updated."
+    else
+      default_error_message = "Channel settings updation failed. Try again later."
+      flash_message = @chat_channel.errors.full_messages.to_sentence.presence || default_error_message
+    end
+
+    current_user_membership = @chat_channel.mod_memberships.find_by!(user: current_user)
+
+    render json: { flash_message: flash_message,  membership: current_user_membership }
   end
 
   def open

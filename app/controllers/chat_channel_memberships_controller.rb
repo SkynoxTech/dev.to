@@ -23,6 +23,15 @@ class ChatChannelMembershipsController < ApplicationController
     authorize @membership
   end
 
+  def edit_membership
+    @membership = ChatChannelMembership.find(params[:id])
+    @channel = @membership.chat_channel
+
+    authorize @membership
+
+    render json: { membership: @membership, channel: @channel }
+  end
+
   def create
     membership_params = params[:chat_channel_membership]
     @chat_channel = ChatChannel.find(membership_params[:chat_channel_id])
@@ -37,6 +46,24 @@ class ChatChannelMembershipsController < ApplicationController
                               end
     membership = @chat_channel.chat_channel_memberships.find_by!(user: current_user)
     redirect_to edit_chat_channel_membership_path(membership)
+  end
+
+  def create_membership
+    membership_params = params[:chat_channel_membership]
+    @chat_channel = ChatChannel.find(membership_params[:chat_channel_id])
+    authorize @chat_channel, :update?
+    usernames = membership_params[:invitation_usernames].split(",").map { |username| username.strip.delete("@") }
+    users = User.where(username: usernames)
+    invitations_sent = @chat_channel.invite_users(users: users, membership_role: "member", inviter: current_user)
+    flash_message = if invitations_sent.zero?
+                      "No invitations sent. Check for username typos."
+                    else
+                      "#{invitations_sent} #{'invitation'.pluralize(invitations_sent)} sent."
+                    end
+
+    membership = @chat_channel.chat_channel_memberships.find_by!(user: current_user)
+
+    render json: { flash_message: flash_message, membership: membership }
   end
 
   def remove_membership
@@ -55,6 +82,23 @@ class ChatChannelMembershipsController < ApplicationController
     redirect_to edit_chat_channel_membership_path(membership)
   end
 
+  def remove_membership_json
+    @chat_channel = ChatChannel.find(params[:chat_channel_id])
+    authorize @chat_channel, :update?
+    @chat_channel_membership = @chat_channel.chat_channel_memberships.find(params[:membership_id])
+    if params[:status] == "pending"
+      @chat_channel_membership.destroy
+      flash_message = "Invitation removed."
+    else
+      send_chat_action_message("@#{current_user.username} removed @#{@chat_channel_membership.user.username} from #{@chat_channel_membership.channel_name}", current_user, @chat_channel_membership.chat_channel_id, "removed_from_channel")
+      @chat_channel_membership.update(status: "removed_from_channel")
+      flash_message = "Removed #{@chat_channel_membership.user.name}"
+    end
+    membership = ChatChannelMembership.find_by!(chat_channel_id: params[:chat_channel_id], user: current_user)
+
+    render json: { flash_message: flash_message, membership: membership }
+  end
+
   def update
     @chat_channel_membership = ChatChannelMembership.find(params[:id])
     authorize @chat_channel_membership
@@ -67,6 +111,18 @@ class ChatChannelMembershipsController < ApplicationController
     end
   end
 
+  def update_membership
+    @chat_channel_membership = ChatChannelMembership.find(params[:id])
+    authorize @chat_channel_membership
+    if permitted_params[:user_action].present?
+      respond_to_invitation_json
+    else
+      @chat_channel_membership.update(permitted_params)
+      flash_message = "Personal settings updated."
+      render json: { flash_message: flash_message, chat_channel_membership: @chat_channel_membership }
+    end
+  end
+
   def destroy
     @chat_channel_membership = ChatChannelMembership.find(params[:id])
     authorize @chat_channel_membership
@@ -75,7 +131,20 @@ class ChatChannelMembershipsController < ApplicationController
     @chat_channel_membership.update(status: "left_channel")
     @chat_channels_memberships = []
     flash[:settings_notice] = "You have left the channel #{channel_name}. It may take a moment to be removed from your list."
+
     redirect_to chat_channel_memberships_path
+  end
+
+  def destroy_membership
+    @chat_channel_membership = ChatChannelMembership.find(params[:id])
+    authorize @chat_channel_membership
+    channel_name = @chat_channel_membership.chat_channel.channel_name
+    send_chat_action_message("@#{current_user.username} left #{@chat_channel_membership.channel_name}", current_user, @chat_channel_membership.chat_channel_id, "left_channel")
+    @chat_channel_membership.update(status: "left_channel")
+    @chat_channels_memberships = []
+    flash_message = "You have left the channel #{channel_name}. It may take a moment to be removed from your list."
+
+    render json: { flash_message: flash_message, membership: @chat_channel_membership }
   end
 
   private
@@ -95,6 +164,20 @@ class ChatChannelMembershipsController < ApplicationController
       flash[:settings_notice] = "Invitation rejected."
     end
     redirect_to chat_channel_memberships_path
+  end
+
+  def respond_to_invitation_json
+    if permitted_params[:user_action] == "accept"
+      @chat_channel_membership.update(status: "active")
+      channel_name = @chat_channel_membership.chat_channel.channel_name
+      send_chat_action_message("@#{current_user.username} joined #{@chat_channel_membership.channel_name}", current_user, @chat_channel_membership.chat_channel_id, "joined")
+      flash_message = "Invitation to  #{channel_name} accepted. It may take a moment to show up in your list."
+    else
+      @chat_channel_membership.update(status: "rejected")
+      flash_message = "Invitation rejected."
+    end
+
+    reder json: { flash_message: flash_message, chat_channel_membership: chat_channel_membership }
   end
 
   def send_chat_action_message(message, user, channel_id, action)
