@@ -382,6 +382,7 @@ RSpec.describe "ChatChannelMemberships", type: :request do
 
     context "when there is no channel id" do
       it "channel not found" do
+        allow(Pusher).to receive(:trigger).and_return(true)
         membership = ChatChannelMembership.find_by(chat_channel_id: chat_channel.id, user_id: second_user.id)
 
         patch "/chat_channel_memberships/update_membership_role/", params: {
